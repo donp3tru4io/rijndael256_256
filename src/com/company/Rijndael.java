@@ -100,7 +100,7 @@ public class Rijndael {
 
         int blockCount;
         boolean lastFull;
-        if (message.length * 8 / 256 == 0)
+        if ((message.length * 8) % blockSize == 0)
         {
             blockCount = message.length * 8 / 256;
             lastFull = true;
@@ -115,7 +115,6 @@ public class Rijndael {
 
         int mesIt = 0;
         int colCount = blockSize / 32;
-
 
         if (lastFull) {
             for (int i = 0; i < blockCount; i++) {
@@ -143,7 +142,6 @@ public class Rijndael {
                 blocks[i] = block;
 
             }
-
             byte[][] block = new byte[4][colCount];
 
             for (int col = 0; col < colCount; col++)
@@ -153,7 +151,7 @@ public class Rijndael {
                 {
                     block[row][col] = message[mesIt];
                     mesIt++;
-                    if (mesIt == message.length-1)
+                    if (!(mesIt < message.length))
                     {
                         breaking = true;
                         break;
@@ -442,14 +440,38 @@ public class Rijndael {
         {
              block = encrypt(allBlocks[a]);
 
-             for (int i = 0; i < 4; i++)
-                 for (int j = 0; j < Nb; j++) {
+             for (int i = 0; i < Nb; i++)
+                 for (int j = 0; j < 4; j++) {
                      res[resIt] = block[j][i];
                      resIt++;
                  }
         }
         return res;
+    }
 
+
+    public byte[] decryptMess(byte[] message, byte[] key)
+    {
+
+        keyArray = buildKey(key,blockSize);
+        keyExpansion();
+        byte[][][] allBlocks= buildAllBlocks(message);
+
+        int resIt = 0;
+        byte[] res = new byte[allBlocks.length * 4 * Nb];
+        byte[][] block;
+
+        for (int a = 0; a < allBlocks.length;a++)
+        {
+            block = decrypt(allBlocks[a]);
+
+            for (int i = 0; i < Nb; i++)
+                for (int j = 0; j < 4; j++) {
+                    res[resIt] = block[j][i];
+                    resIt++;
+                }
+        }
+        return res;
     }
 
 
