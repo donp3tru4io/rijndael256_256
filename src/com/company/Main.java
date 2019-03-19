@@ -1,126 +1,89 @@
 package com.company;
 
 import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Array;
-import java.util.Random;
-
 public class Main {
 
-    public static byte[] longToByteArr(long l)
-    {
-        byte[] bytes = new byte[8];
-        for(int i = 7; i >=0 ; i--)
-        {
-            bytes[i] = (byte)l;
-            l = l >> 8;
-        }
-        return bytes;
-    }
 
-    public static long byteArrToLong(byte[] bytes)
-    {
-        long l = 0;
-        for (int i = 0; i < 7; i++)
-        {
-            l = l | ( bytes[i] & 0xFF);
-            l = l << 8;
-        }
-        l = l | ( bytes[7] & 0xFF);
-        return l;
-    }
+    private static String key = "This is 256 key for Rijndael alg";
+    private static String  IB = "Server B identificator !";
+    private static long dt= 5000;
 
-    public static byte[] concatByteArr(byte[] arr1, byte[] arr2)
-    {
-        byte[] res = new byte[arr1.length + arr2.length];
-        int i = 0;
-        for( ; i < arr1.length; i++)
-            res[i] = arr1[i];
-        for(int j = 0; i < res.length; i++, j++)
-            res[i] = arr2[j];
-        return res;
-    }
-
-    public static byte[] subArray(byte[] arr1, int start, int end){
-         byte[] res = new byte[end-start];
-         for(int i = start, j = 0; i < end; i++, j++)
-             res[j] = arr1[i];
-         return res;
-    }
-
-
-    public static void main(String[] args) throws UnsupportedEncodingException {
+    public static void main(String[] args) {
 	// write your code here
 
-        String key = "Some key information for Rijndael";
-        String mes = "Testing rijndael work by encrypting and decrypting this mes";
+
+        /// A side
+        long tA = System.currentTimeMillis();
+        byte[] bytetA = Utils.longToByteArr(tA);
+        String tAHex = Utils.byteArrToHex(bytetA);
+
+        System.out.println("A: time label in hex : "+tAHex);
+
+        byte[] byteIB = IB.getBytes();
+        String hexIB = Utils.byteArrToHex(byteIB);
+
+        System.out.println("A: B identificator in hex : "+hexIB);
+
+        byte[] authData = Utils.concatByteArr(bytetA,byteIB);
+        String hexAuthData = Utils.byteArrToHex(authData);
+        System.out.println("A: auth data in hex : "+hexAuthData);
 
         Rijndael rijndael = new Rijndael();
-        System.out.println(mes);
-        byte[] encrypted = rijndael.encryptMess(mes.getBytes(),key.getBytes());
-        System.out.println(new String(encrypted));
-        byte[] decrypted = rijndael.decryptMess(encrypted,key.getBytes());
-        System.out.println("|" + new String(decrypted) + "|");
 
+        byte[] encAuthData = rijndael.encryptMess(authData,key.getBytes());
+        String hexEncAuthData = Utils.byteArrToHex(encAuthData);
+        System.out.println("A: encrypted auth data in hex : "+hexEncAuthData);
 
-        System.out.println(new String(concatByteArr("abcd".getBytes(),"qwerty".getBytes())));
-        System.out.println(new String(subArray("qwertyuiop".getBytes(), 2,5)));
+        byte[] sendData = Utils.concatByteArr(bytetA,encAuthData);
+        String hexSendData = Utils.byteArrToHex(sendData);
+        System.out.println("A: data to sent : "+hexSendData);
+        System.out.println("A: sending to server B");
 
+        /// B side
+        System.out.println();
+        System.out.println("B: received data : "+hexSendData);
+        long tB = System.currentTimeMillis();
+        System.out.println("B: time label in hex : "+Long.toHexString(tB));
+        byte[] receivedtA = Utils.subArray(sendData,0,8);
+        long tAr1 = Utils.byteArrToLong(receivedtA);
+        if (tB - tAr1 > dt || tB - tA < 0)
+        {
+            System.out.println("B: time out");
+            System.out.println("B: response : no authentificated");
+            return;
+        }
 
-//        Rijndael rijndael = new Rijndael(key.getBytes());
+        byte[] recAuthData = Utils.subArray(sendData, 8 ,sendData.length);
+        String hexRecAuthData = Utils.byteArrToHex(recAuthData);
+        System.out.println("B: received encrypted auth data : "+hexRecAuthData);
 
-//        byte[][] keyArr = rijndael.getKeyArray();
-//        System.out.println("------------\nkey");
-//        for(int i = 0; i < 8; i++)
-//        {
-//            for (int j = 0; j < 4; j++)
-//                System.out.print((char)keyArr[i][j]+", ");
-//            System.out.println();
-//        }
-//
-//
-//        System.out.println("------------\ndata");
-//
-//
-//        byte[][] data = rijndael.buildBlock(mes.getBytes(),256);
-//        for(int i = 0; i < 4; i++)
-//        {
-//            for (int j = 0; j < 8; j++)
-//                System.out.print((char)data[i][j]+", ");
-//            System.out.println();
-//        }
-//
-//
-//        System.out.println("------------\nencrypted");
-//        data = rijndael.encrypt(data);
-//        for(int i = 0; i < 4; i++)
-//        {
-//            for (int j = 0; j < 8; j++)
-//                System.out.print((char)data[i][j]+", ");
-//            System.out.println();
-//        }
-//
-//        System.out.println("------------\ndecrypted");
-//        data = rijndael.decrypt(data);
-//        for(int i = 0; i < 4; i++)
-//        {
-//            for (int j = 0; j < 8; j++)
-//                System.out.print((char)data[i][j]+", ");
-//            System.out.println();
-//        }
+        byte[] decryptedAuthData = rijndael.decryptMess(recAuthData, key.getBytes());
+        String hexDecAuthData = Utils.byteArrToHex(decryptedAuthData);
+        System.out.println("B: decrypted auth data : "+hexDecAuthData);
 
+        byte[] decTA = Utils.subArray(decryptedAuthData,0,8);
+        String hexDecTA = Utils.byteArrToHex(decTA);
+        System.out.println("B: decrypted time label : "+hexDecTA);
 
-//        Random rand = new Random();
-//
-//        long l = rand.nextLong();
-//
-//        System.out.println(l);
-//
-//        byte [] bytes = longToByteArr(l);
-//
-//        long newL = byteArrToLong(bytes);
-//
-//        System.out.println(newL);
+        if (!Utils.bytesEquels(receivedtA,decTA))
+        {
+            System.out.println("B: different time labels");
+            System.out.println("B: response : no authentificated");
+            return;
+        }
 
+        byte[] decIB = Utils.subArray(decryptedAuthData, 8, decryptedAuthData.length);
+        String hexDecIB = Utils.byteArrToHex(decIB);
+        System.out.println("B: decrypted B identificator in hex : "+hexDecIB);
+
+        if (!Utils.bytesEquels(decIB,IB.getBytes()))
+        {
+            System.out.println("B: different B identificators");
+            System.out.println("B: response : no authentificated");
+            return;
+        }
+
+        System.out.println("B: AUTH SUCCESS");
 
     }
 }
