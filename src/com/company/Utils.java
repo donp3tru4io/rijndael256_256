@@ -1,5 +1,8 @@
 package com.company;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 public abstract class Utils {
 
     public static byte[] longToByteArr(long l)
@@ -48,7 +51,8 @@ public abstract class Utils {
         String res = "";
         for (int i = 0; i < arr.length; i++)
         {
-            res += Integer.toHexString(arr[i] & 0xff);
+            String hx = Integer.toHexString(arr[i] & 0xff);
+            res += hx.length() < 2 ? "0" + hx : hx;
         }
         return res;
     }
@@ -64,6 +68,38 @@ public abstract class Utils {
         }
         return true;
 
+    }
+
+    public static byte[] hexToByteArray(String s)
+    {
+        byte[] response;
+        if (s.length()%2 == 1) {
+            response = new byte[s.length()/2 + 1];
+            response[0] = (byte)Integer.parseInt(s.charAt(0)+"",16);
+            for (int i = 1,j = 1; i < response.length; i++, j+=2) {
+                response[i] = (byte)Integer.parseInt(s.substring(j, j + 2),16);
+            }
+        }else{
+            response = new byte[s.length()/2];
+            for (int i = 0, j = 0; i < response.length; i++, j+=2)
+                response[i] = (byte)Integer.parseInt(s.substring(j, j + 2),16);
+        }
+        return response;
+    }
+
+
+    public static boolean hexRegex(String s)
+    {
+        Pattern pattern = Pattern.compile("[^a-fA-F0-9]", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(s);
+        return matcher.find();
+    }
+
+    public static boolean timeRegex(String s)
+    {
+        Pattern pattern = Pattern.compile("[^0-9]", Pattern.CASE_INSENSITIVE);
+        Matcher matcher = pattern.matcher(s);
+        return matcher.find();
     }
 
 }
